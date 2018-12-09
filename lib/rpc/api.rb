@@ -12,9 +12,10 @@ class RpcController < ApplicationController
   before_action :check_ip
 
   def ar
-    model_name = params[:model_name].constantize
+    payloads = ActiveSupport::HashWithIndifferentAccess.new(params)
+    model_name = payloads[:model_name].constantize
     result = model_name
-    params[:method_chain].each do |element|
+    payloads[:method_chain].each do |element|
       result = result.send(element[:method], *element[:arguments])
     end
     result = JSON.parse result.to_json rescue result
