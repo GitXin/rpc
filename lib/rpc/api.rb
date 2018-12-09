@@ -18,11 +18,16 @@ class RpcController < ApplicationController
       result = result.send(element[:method], *element[:arguments])
     end
     result = JSON.parse result.to_json rescue result
-    render json: result
+    render json: { code: 0, data: result }
+  rescue => e
+    render json: { code: 1, msg: e.to_s }
   end
 
   private
 
   def check_ip
+    unless request.remote_ip.in? (Rpc::IPS + Rpc::LOCAL_IPS)
+      render json: { code: 1, msg: "unauthorized ip: #{request.remote_ip}" }
+    end
   end
 end

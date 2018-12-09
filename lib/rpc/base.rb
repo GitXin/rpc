@@ -19,11 +19,13 @@ module Rpc
       def request(payloads)
         puts payloads
         url = Object.const_get(namespace_name)::BASE_URL + '/rpc/ar'
-        HTTParty.post(
+        result = HTTParty.post(
           url,
           body: payloads.to_json,
           headers: { 'Content-Type' => 'application/json' }
         ).parsed_response
+        raise result['msg'] if result['code'] == 1
+        result['data']
       end
     end
   end
