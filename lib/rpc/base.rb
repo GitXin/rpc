@@ -16,10 +16,14 @@ module Rpc
         Relation.new(name).send(method, *arguments, &block)
       end
 
-      def request(eval_str)
-        puts eval_str
-        url = Object.const_get(name.split('::').first)::BASE_URL + '/rpc/ar'
-        HTTParty.post(url, body: { eval_str: eval_str }).parsed_response
+      def request(payloads)
+        puts payloads
+        url = Object.const_get(namespace_name)::BASE_URL + '/rpc/ar'
+        HTTParty.post(
+          url,
+          body: payloads.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        ).parsed_response
       end
     end
   end
@@ -27,16 +31,19 @@ module Rpc
   class Relation
     def initialize(model_name)
       @model_name = model_name
-      @invoke_str = model_name.split('::').last
+      @payloads = {
+        model_name: model_name.split('::').last,
+        method_chain: []
+      }
     end
 
     def method_missing(method, *arguments, &block)
       case state(method)
       when 'complete'
-        @invoke_str += joining(method, *arguments)
+        @payloads[:method_chain] << { method: method, arguments: arguments }
         run
       when 'uncomplete'
-        @invoke_str += joining(method, *arguments)
+        @payloads[:method_chain] << { method: method, arguments: arguments }
         self
       else
         run.send(method, *arguments, &block)
@@ -71,7 +78,7 @@ module Rpc
 
     def run
       model = Object.const_get(@model_name)
-      result = model.request(@invoke_str)
+      result = model.request(@payloads)
       if result.is_a? Array
         if result[0].is_a? Hash
           result.map { |attributes| model.new.assign_attributes(attributes) }

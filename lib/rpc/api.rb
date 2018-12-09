@@ -12,7 +12,11 @@ class RpcController < ApplicationController
   before_action :check_ip
 
   def ar
-    result = eval(params[:eval_str])
+    model_name = params[:model_name].constantize
+    result = model_name
+    params[:method_chain].each do |element|
+      result = result.send(element[:method], *element[:arguments])
+    end
     result = JSON.parse result.to_json rescue result
     render json: result
   end
