@@ -1,35 +1,92 @@
 # Rpc
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rpc`. To experiment with that code, run `bin/console` for an interactive prompt.
+Remote Procedure Call among rails projects.
 
-TODO: Delete this and the text above, and describe your gem
+* expose class methods to some other projects by declaring, instead of writing complex controller/action codes
+
+* support active-record query chain methods by default
+
+* using white ips to ensure security
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'rpc'
+gem 'rpc', github: 'GitXin/rpc', branch: :master
 ```
 
 And then execute:
 
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install rpc
+```
+$ bundle
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+Add `rpc.rb` into `config/initializers/`
 
-## Development
+### Active current project to be rpc
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```ruby
+require 'rpc/api'
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+This will generate a route and an controller#action for rpc.
+
+### Set white ips for current project
+
+The default white ips are `['127.0.0.1', '::1']`, so that we can access local projects when develop.
+
+Just add another ips like below:
+
+```ruby
+module Rpc
+  IPS = ['ip.ip.ip.ip']
+end
+```
+
+### Permit certain methods to be accessible
+
+There are some default methods can be accessible througth rpc, so that we can use active-record easily, those methods can be found at `lib/rpc/permit_methods.rb`.
+
+And maybe you want to expose some custom methods, just define the constant named `RPC_METHODS`, then those methods can be permitted to access.
+
+```ruby
+Example::RPC_METHODS = [:test_method]
+```
+
+### Use models from another project
+
+Declare antoher project's basic info, such as url, models to be rpc.
+
+```ruby
+module Rpc
+  module Server
+    BASE_URL = 'http://server.example.com'
+
+    class Example < Rpc::Base
+    end
+  end
+end
+```
+
+Then we can use rpc like below:
+
+```ruby
+# default active-record syntax
+Rpc::Server::Example.first
+# => #<Rpc::Server::Example:0x00007fa6a1d6e300 @attributes={"id"=>1, "name"=>"justtest"}>
+
+# default active-record syntax
+Rpc::Server::Example.where(name: 'rpc').count
+# => 1
+
+# permitted to be access by last chapter's definition
+Rpc::Server::Example.test_method
+# => value return by test_methods from remote server
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/rpc.
+Bug reports and pull requests are welcome on GitHub at [https://github.com/GitXin/rpc](https://github.com/GitXin/rpc).
