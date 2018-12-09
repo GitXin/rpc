@@ -6,6 +6,13 @@ Rails.application.routes.append do
   end
 end
 
+module Kernel
+  def rpc_respond_to? method
+    custom_permit_methods = const_defined?('RPC_METHODS') ? const_get('RPC_METHODS') : []
+    (Rpc::PermitMethods::COMPLETE + Rpc::PermitMethods::UNCOMPLETE + custom_permit_methods).include? method.to_sym
+  end
+end
+
 class RpcController < ApplicationController
   skip_before_filter :verify_authenticity_token
   wrap_parameters false
@@ -13,9 +20,10 @@ class RpcController < ApplicationController
 
   def ar
     payloads = ActiveSupport::HashWithIndifferentAccess.new(params)
-    model_name = payloads[:model_name].constantize
-    result = model_name
+    model = payloads[:model_name].constantize
+    result = model
     payloads[:method_chain].each do |element|
+      raise "unpermitted method #{element[:method]} for #{model}" unless model.rpc_respond_to? element[:method]
       result = result.send(element[:method], *element[:arguments])
     end
     result = JSON.parse result.to_json rescue result

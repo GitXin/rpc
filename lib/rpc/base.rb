@@ -1,4 +1,5 @@
 require 'httparty'
+require 'rpc/permit_methods'
 
 module Rpc
   class Base
@@ -17,14 +18,13 @@ module Rpc
       end
 
       def request(payloads)
-        puts payloads
         url = Object.const_get(namespace_name)::BASE_URL + '/rpc/ar'
         result = HTTParty.post(
           url,
           body: payloads.to_json,
           headers: { 'Content-Type' => 'application/json' }
         ).parsed_response
-        raise result['msg'] if result['code'] == 1
+        raise "Rpc: #{result['msg']}" if result['code'] == 1
         result['data']
       end
     end
@@ -40,15 +40,20 @@ module Rpc
     end
 
     def method_missing(method, *arguments, &block)
+      @payloads[:method_chain] << { method: method, arguments: arguments }
+
       case state(method)
       when 'complete'
-        @payloads[:method_chain] << { method: method, arguments: arguments }
         run
       when 'uncomplete'
-        @payloads[:method_chain] << { method: method, arguments: arguments }
         self
       else
-        run.send(method, *arguments, &block)
+        if block_given?
+          @payloads[:method_chain].pop
+          run.send(method, *arguments, &block)
+        else
+          run
+        end
       end
     end
 
@@ -61,17 +66,9 @@ module Rpc
     end
 
     def state(method)
-      if [
-        :find, :take, :take!, :first, :first!, :last, :last!, :exists?, :any?, :many?,
-        :count, :average, :minimum, :maximum, :sum, :calculate,
-        :all
-      ].include? method
+      if PermitMethods::COMPLETE.include? method
         'complete'
-      elsif [
-        :select, :group, :order, :except, :reorder, :limit, :offset, :joins,
-        :where, :rewhere, :preload, :eager_load, :includes, :from, :lock, :readonly,
-        :having, :create_with, :uniq, :distinct, :references, :none, :unscope
-      ].include? method
+      elsif PermitMethods::UNCOMPLETE.include? method
         'uncomplete'
       else
         'reinvoke'
