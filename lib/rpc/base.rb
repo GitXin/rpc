@@ -18,6 +18,7 @@ module Rpc
       end
 
       def request(payloads)
+        namespace_name = name.split("::")[0..-2].join('::')
         url = Object.const_get(namespace_name)::BASE_URL + '/rpc/ar'
         result = HTTParty.post(
           url,

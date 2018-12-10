@@ -14,12 +14,12 @@ module Kernel
 end
 
 class RpcController < ApplicationController
-  skip_before_filter :verify_authenticity_token
+  skip_before_action :verify_authenticity_token
   wrap_parameters false
   before_action :check_ip
 
   def ar
-    payloads = ActiveSupport::HashWithIndifferentAccess.new(params)
+    payloads = ActiveSupport::HashWithIndifferentAccess.new(params.permit!)
     model = payloads[:model_name].constantize
     result = model
     payloads[:method_chain].each do |element|
