@@ -16,10 +16,10 @@ end
 class RpcController < ApplicationController
   skip_before_action :verify_authenticity_token
   wrap_parameters false
-  before_action :check_ip
+  before_action :check_ip, :verify_sign
 
   def ar
-    payloads = ActiveSupport::HashWithIndifferentAccess.new(params.permit!)
+    payloads = ActiveSupport::HashWithIndifferentAccess.new(params[:data].permit!)
     model = payloads[:model_name].constantize
     result = model
     payloads[:method_chain].each do |element|
@@ -37,6 +37,12 @@ class RpcController < ApplicationController
   def check_ip
     unless request.remote_ip.in? (Rpc::IPS + Rpc::LOCAL_IPS)
       render json: { code: 1, msg: "unauthorized ip: #{request.remote_ip}" }
+    end
+  end
+
+  def verify_sign
+    unless Rpc::Signature.verify_sign(params[:data], params[:sign])
+      render json: { code: 1, msg: 'verify sign fail' }
     end
   end
 end

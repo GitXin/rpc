@@ -6,7 +6,7 @@ Remote Procedure Call among rails projects.
 
 * support active-record query chain methods by default
 
-* using white ips to ensure security
+* using white ips & signature verify to ensure security
 
 ## Installation
 
@@ -43,6 +43,16 @@ Just add another ips like below:
 ```ruby
 module Rpc
   IPS = ['ip.ip.ip.ip']
+end
+```
+
+### Set unique digest key
+
+The default digest key is 'reserve', you can override within your unique digest key to keep safe:
+
+```ruby
+module Rpc
+  DIGEST_KEY = 'unique'
 end
 ```
 

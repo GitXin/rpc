@@ -17,15 +17,20 @@ module Rpc
         Relation.new(name).send(method, *arguments, &block)
       end
 
-      def request(payloads)
+      def request(data)
         namespace_name = name.split("::")[0..-2].join('::')
         url = Object.const_get(namespace_name)::BASE_URL + '/rpc/ar'
+        payloads = {
+          data: data,
+          sign: Rpc::Signature.sign(data)
+        }
         result = HTTParty.post(
           url,
           body: payloads.to_json,
           headers: { 'Content-Type' => 'application/json' }
         ).parsed_response
-        raise "Rpc: #{result['msg']}" if result['code'] == 1
+        raise "#{namespace_name}: Internal Error" unless result.is_a? Hash
+        raise "#{namespace_name}: #{result['msg']}" if result['code'] == 1
         result['data']
       end
     end
